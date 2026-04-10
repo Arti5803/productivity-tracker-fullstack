@@ -18,7 +18,7 @@ const quotes = [
 
 // Load data from localStorage
 async function fetchTasks() {
-  const res = await fetch('http://localhost:3000/tasks');
+  const res = await fetch('https://productivity-tracker-fullstack.onrender.com/tasks');
   const data = await res.json();
   tasks = data;
   renderTasks();
@@ -68,7 +68,7 @@ async function addTask(e) {
     };
 
     // 🔥 Send to backend
-    const res = await fetch('http://localhost:3000/tasks', {
+    const res = await fetch('https://productivity-tracker-fullstack.onrender.com/tasks', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -111,7 +111,7 @@ function renderTasks() {
     });
 }
 async function deleteTask(taskId) {
-    await fetch(`http://localhost:3000/tasks/${taskId}`, {
+    await fetch(`https://productivity-tracker-fullstack.onrender.com/tasks/${taskId}`, {
         method: 'DELETE'
     });
 
@@ -120,7 +120,7 @@ async function deleteTask(taskId) {
 }
 
 async function toggleTaskCompletion(taskId, completed) {
-    const res = await fetch(`http://localhost:3000/tasks/${taskId}`, {
+    const res = await fetch(`https://productivity-tracker-fullstack.onrender.com/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
