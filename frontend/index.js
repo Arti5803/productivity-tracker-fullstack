@@ -1,3 +1,5 @@
+let tasks = [];
+
 const taskForm = document.getElementById('task-form');
 const taskInput = document.getElementById('task-input');
 const taskList = document.getElementById('task-list');
@@ -15,7 +17,12 @@ const quotes = [
 ];
 
 // Load data from localStorage
-let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+async function fetchTasks() {
+  const res = await fetch('http://localhost:3000/tasks');
+  const data = await res.json();
+  tasks = data;
+  renderTasks();
+}
 let streak = parseInt(localStorage.getItem('streak')) || 0;
 let lastCompletedDate = localStorage.getItem('lastCompletedDate') || null;
 
@@ -44,25 +51,38 @@ let progressChart = new Chart(progressChartCanvas, {
 
 // Event Listeners
 taskForm.addEventListener('submit', addTask);
-taskList.addEventListener('change', toggleTaskCompletion);
+// taskList.addEventListener('change', toggleTaskCompletion);
 
 // Functions
-function addTask(e) {
+console.log("Form submitted");
+async function addTask(e) {
     e.preventDefault();
+
     const taskText = taskInput.value.trim();
-    if (taskText) {
-        const task = {
-            id: Date.now(),
-            text: taskText,
-            completed: false,
-            dateAdded: new Date().toISOString().split('T')[0]
-        };
-        tasks.push(task);
-        saveTasks();
-        renderTasks();
-        taskInput.value = '';
-        updateMotivationalQuote();
-    }
+    if (!taskText) return;
+
+    const newTask = {
+        text: taskText,
+        completed: false,
+        dateAdded: new Date().toISOString().split('T')[0]
+    };
+
+    // 🔥 Send to backend
+    const res = await fetch('http://localhost:3000/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newTask)
+    });
+
+    const data = await res.json();
+
+    // Update UI
+    tasks.push(data);
+    renderTasks();
+
+    taskInput.value = '';
 }
 
 function renderTasks() {
@@ -70,27 +90,55 @@ function renderTasks() {
     tasks.forEach(task => {
         const li = document.createElement('li');
         li.className = `task-item ${task.completed ? 'completed' : ''}`;
-        li.innerHTML = `
-            <input type="checkbox" id="task-${task.id}" ${task.completed ? 'checked' : ''}>
-            <span>${task.text}</span>
-        `;
-        li.querySelector('input').addEventListener('change', () => toggleTaskCompletion(task.id));
+
+
+   li.innerHTML = `
+  <input type="checkbox" ${task.completed ? 'checked' : ''}>
+  <span>${task.text}</span>
+  <button class="delete-btn">❌</button>
+`;
+        // checkbox event
+        li.querySelector('input').addEventListener('change', (e) => {
+            toggleTaskCompletion(task._id , e.target.checked);
+        });
+
+        // 🔥 DELETE EVENT (ADD HERE)
+        li.querySelector('.delete-btn').addEventListener('click', () => {
+            deleteTask(task._id);
+        });
+
         taskList.appendChild(li);
     });
 }
+async function deleteTask(taskId) {
+    await fetch(`http://localhost:3000/tasks/${taskId}`, {
+        method: 'DELETE'
+    });
 
-function toggleTaskCompletion(taskId) {
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-        task.completed = !task.completed;
-        saveTasks();
-        renderTasks();
-        updateStreak();
-        updateChart();
-        updateMotivationalQuote();
-    }
+    tasks = tasks.filter(t => t._id !== taskId);
+    renderTasks();
 }
 
+async function toggleTaskCompletion(taskId, completed) {
+    const res = await fetch(`http://localhost:3000/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ completed })
+    });
+
+    const updatedTask = await res.json();
+
+   tasks = tasks.map(t => 
+    t._id === taskId ? updatedTask : t
+);
+
+    renderTasks();
+    updateStreak();
+    updateChart();
+    updateMotivationalQuote();
+}
 function updateStreak() {
     const today = new Date().toISOString().split('T')[0];
     const completedToday = tasks.some(task => task.completed && task.dateAdded === today);
@@ -153,6 +201,6 @@ function saveTasks() {
 
 
 // Initialize on Load
-renderTasks();
+fetchTasks();
 updateStreak();
 updateMotivationalQuote();
